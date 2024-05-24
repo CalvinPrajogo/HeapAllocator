@@ -20,7 +20,10 @@ typedef union header header_t;
 header_t* start = NULL;
 header_t* end = NULL;
 
-
+/*
+ * Traverses the heap looking for the best fit free block
+ * Returns a pointer to the header of the best fit block
+ */
 header_t* find_free_block(size_t size) {
 
     header_t* current = start;
@@ -122,7 +125,11 @@ void* heap_alloc(size_t size) {
     return block;
 }
 
-void* calloc(size_t num, size_t size) {
+/*
+ * Allocates a block of memory for an array of num elements, each of them size bytes long, and initializes all its bits to zero
+ * Returns a pointer to the beginning of the block of memory that was allocated
+ */
+void* heap_calloc(size_t num, size_t size) {
     size_t total_size;
     void* block;
 
@@ -149,7 +156,11 @@ void* calloc(size_t num, size_t size) {
     return block;
 }
 
-void* realloc(void* block, size_t size) {
+/*
+ * Changes the size of the memory block pointed to by block to size bytes
+ * Returns a pointer to the beginning of the block of memory that was allocated
+ */
+void* heap_realloc(void* block, size_t size) {
     if (block == NULL) {
         return malloc(size);
     }
@@ -180,6 +191,9 @@ void* realloc(void* block, size_t size) {
     return new_block;
 }
 
+/*
+ * Frees the memory space pointed to by block and immediately coalesces adjacent free blocks
+ */
 void heap_free(void* block) {
     if (block == NULL) {
         return;
@@ -215,5 +229,18 @@ void heap_free(void* block) {
         prev_block_header->s.size += current->s.size;
 
         footer->s.size = prev_block_header->s.size;
+    }
+}
+
+/*
+ * Prints the heap
+ */
+void print_heap() {
+    header_t* current = start;
+    printf("start = %p, end = %p \n", (void*)start, (void*)end);
+
+    while (current != end) {
+        printf("Header: %p, Size: %lu, Free: %d, Prev Free: %d, Next Block: %p\n", (void*)current, current->s.size, current->s.free, current->s.prev_free, (void*)current->s.next_block);
+        current = current->s.next_block;
     }
 }

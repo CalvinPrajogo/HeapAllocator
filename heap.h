@@ -9,4 +9,9 @@
 #include <string.h>
 
 
-
+header_t* find_free_block(size_t size);
+void* heap_alloc(size_t size);
+void* heap_calloc(size_t num, size_t size);
+void* heap_realloc(void* block, size_t size);
+void heap_free(void* block);
+void print_heap();
