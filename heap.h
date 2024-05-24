@@ -8,7 +8,5 @@
 #include <fcntl.h>
 #include <string.h>
 
-typedef struct {
-    int size;
-} header;
+
 
