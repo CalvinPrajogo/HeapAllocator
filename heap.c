@@ -149,10 +149,37 @@ void* calloc(size_t num, size_t size) {
     return block;
 }
 
-//TODO: Implement heap_realloc
+void* realloc(void* block, size_t size) {
+    if (block == NULL) {
+        return malloc(size);
+    }
 
+    if (size == 0) {
+        free(block);
+        return NULL;
+    }
 
-//TODO: Implement heap_free
+    header_t* header = block - sizeof(header_t);
+    void* new_block;
+
+    // Check if the block is already greater than or equal to the requested size
+    if (header->s.size == size) {
+        return block;
+    }
+
+    new_block = malloc(size);
+    if (new_block == NULL) {
+        return NULL;
+    }
+
+    // Copy the data from the old block to the new block
+    // Memory block can be shrunk so only copy the size of the new block to avoid overflow - UB
+    memcpy(new_block, block, size);
+    free(block);
+
+    return new_block;
+}
+
 void heap_free(void* block) {
     if (block == NULL) {
         return;
