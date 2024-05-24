@@ -8,6 +8,7 @@ union header {
     struct {
         uint size;
         uint free; // 1 if free, 0 if not
+        uint prev_free; // 1 if the previous block is free, 0 if not
         union header* next_block;
     } s;
     char padding[16]; // Ensures that each header is on an address that is a multiple of 16
@@ -81,6 +82,7 @@ void* heap_alloc(int size) {
         // If the size is an exact fit, allocate the block
         if (best_fit_header->s.size == total_size) {
             best_fit_header->s.free = 0;
+            best_fit_header->s.next_block->s.prev_free = 0; // Update the next blocks prev_free
             block = (void*) best_fit_header + sizeof(header_t);
         }
         else {
@@ -89,6 +91,8 @@ void* heap_alloc(int size) {
             new_block->s.size = best_fit_header->s.size - total_size;
             new_block->s.free = 1;
             new_block->s.next_block = best_fit_header->s.next_block;
+            new_block->s.prev_free = 0;
+            new_block->s.next_block->s.prev_free = 1; // Update the next blocks prev_free
             best_fit_header->s.size = total_size;
             best_fit_header->s.free = 0;
             best_fit_header->s.next_block = new_block;
@@ -105,6 +109,7 @@ void* heap_alloc(int size) {
         new_block->s.size = total_size;
         new_block->s.free = 0;
         new_block->s.next_block = end;
+        new_block->s.prev_free = 0;
         block = (void*) new_block + sizeof(header_t);
         if (start == NULL) {
             start = new_block;
@@ -124,6 +129,40 @@ void* heap_alloc(int size) {
 
 
 //TODO: Implement heap_free
-void heap_free() {
+void heap_free(void* block) {
+    if (block == NULL) {
+        return;
+    }
 
+    header_t* current = block - sizeof(header_t);
+
+    // Mark the block as free
+    current->s.free = 1;
+
+    // Update the next blocks prev_free
+    current->s.next_block->s.prev_free = 1;
+
+    // Create a footer for the block
+    header_t* footer = (void*) current + current->s.size - sizeof(header_t);
+    footer->s.size = current->s.size;
+
+    // Coalesce adjacent free blocks - immediate coalescing
+
+    // Check if the next block is free
+    if (current->s.next_block != end && current->s.next_block->s.free == 1) {
+        current->s.size += current->s.next_block->s.size;
+        current->s.next_block = current->s.next_block->s.next_block;
+
+        footer = (void*) current + current->s.size - sizeof(header_t);
+        footer->s.size = current->s.size;
+    }
+
+    // Check if the previous block is free
+    if (current->s.prev_free == 1) {
+        header_t* prev_block_footer = (void*) current - sizeof(header_t);
+        header_t* prev_block_header = (void*) current - prev_block_footer->s.size;
+        prev_block_header->s.size += current->s.size;
+
+        footer->s.size = prev_block_header->s.size;
+    }
 }
