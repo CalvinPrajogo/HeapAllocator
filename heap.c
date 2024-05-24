@@ -6,7 +6,7 @@
  */
 union header {
     struct {
-        uint size;
+        size_t size;
         uint free; // 1 if free, 0 if not
         uint prev_free; // 1 if the previous block is free, 0 if not
         union header* next_block;
@@ -21,7 +21,7 @@ header_t* start = NULL;
 header_t* end = NULL;
 
 
-header_t* find_free_block(int size) {
+header_t* find_free_block(size_t size) {
 
     header_t* current = start;
 
@@ -60,7 +60,7 @@ header_t* find_free_block(int size) {
  * Allocates a block of memory of size bytes.
  * Returns a pointer to the beginning of the block of memory that was allocated
  */
-void* heap_alloc(int size) {
+void* heap_alloc(size_t size) {
     if (size < 1) {
         return NULL;
     }
@@ -122,8 +122,32 @@ void* heap_alloc(int size) {
     return block;
 }
 
-//TODO: Implement heap_calloc
+void* calloc(size_t num, size_t size) {
+    size_t total_size;
+    void* block;
 
+    // Check for null parameters
+    if (num == NULL || size == NULL) {
+        return NULL;
+    }
+
+    total_size = num * size;
+
+    // Check for overflow
+    if (total_size / num != size) {
+        return NULL;
+    }
+
+    block = malloc(total_size);
+    if (block == NULL) {
+        return NULL;
+    }
+
+    // Zero out the block
+    memset(block, 0, total_size);
+
+    return block;
+}
 
 //TODO: Implement heap_realloc
 
