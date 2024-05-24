@@ -30,7 +30,6 @@ header_t* find_free_block(size_t size) {
 
     int best_fit_size = -1; // Size of the best fit block
     void* best_fit_header = NULL; // Pointer to the best fit block header
-    void* best_fit_block; // Pointer to the best fit block
     // Traverse the free list until the end is reached or an exact fit is found - best fit
     while (current->s.size != 1) {
         int current_size = current->s.size;
@@ -45,7 +44,6 @@ header_t* find_free_block(size_t size) {
                 if (current_size > size && (best_fit_size == -1 || current_size < best_fit_size)) {
                     best_fit_size = current_size;
                     best_fit_header = current;
-                    best_fit_block = best_fit_header + sizeof(header_t);
                 }
             }
             // Move to the next block
@@ -130,72 +128,6 @@ void* heap_malloc(size_t size) {
 }
 
 /*
- * Allocates a block of memory for an array of num elements, each of them size bytes long, and initializes all its bits to zero
- * Returns a pointer to the beginning of the block of memory that was allocated
- */
-void* heap_calloc(size_t num, size_t size) {
-    size_t total_size;
-    void* block;
-
-    // Check for null parameters
-    if (num == NULL || size == NULL) {
-        return NULL;
-    }
-
-    total_size = num * size;
-
-    // Check for overflow
-    if (total_size / num != size) {
-        return NULL;
-    }
-
-    block = malloc(total_size);
-    if (block == NULL) {
-        return NULL;
-    }
-
-    // Zero out the block
-    memset(block, 0, total_size);
-
-    return block;
-}
-
-/*
- * Changes the size of the memory block pointed to by block to size bytes
- * Returns a pointer to the beginning of the block of memory that was allocated
- */
-void* heap_realloc(void* block, size_t size) {
-    if (block == NULL) {
-        return malloc(size);
-    }
-
-    if (size == 0) {
-        free(block);
-        return NULL;
-    }
-
-    header_t* header = block - sizeof(header_t);
-    void* new_block;
-
-    // Check if the block is already greater than or equal to the requested size
-    if (header->s.size == size) {
-        return block;
-    }
-
-    new_block = malloc(size);
-    if (new_block == NULL) {
-        return NULL;
-    }
-
-    // Copy the data from the old block to the new block
-    // Memory block can be shrunk so only copy the size of the new block to avoid overflow - UB
-    memcpy(new_block, block, size);
-    free(block);
-
-    return new_block;
-}
-
-/*
  * Frees the memory space pointed to by block and immediately coalesces adjacent free blocks
  */
 void heap_free(void* block) {
@@ -240,20 +172,19 @@ void heap_free(void* block) {
  * Initializes the heap, is run once at the start of the program
  */
 void init_heap() {
-    header_t* start_header = malloc(HEAP_SIZE);
-    start_header->s.size = HEAP_SIZE;
 
-    header_t* end = start_header + HEAP_SIZE - sizeof(header_t);;
+    start = malloc(HEAP_SIZE);
+    // Save space for the end block
+    start->s.size = HEAP_SIZE - sizeof(header_t);
+    start->s.free = 1;
+    start->s.prev_free = 0;
+
+    end = (void*) start + start->s.size;
     end->s.size = 1;
     end->s.free = 0;
     end->s.prev_free = 1;
     end->s.next_block = NULL;
 
-    // Start the heap with a free block
-    start = (void*) start_header + sizeof(header_t);
-    start->s.size = start_header->s.size - sizeof(header_t) * 2;
-    start->s.free = 1;
-    start->s.prev_free = 0;
     start->s.next_block = end;
 }
 
@@ -264,7 +195,7 @@ void print_heap() {
     header_t* current = start;
     printf("start = %p, end = %p \n", (void*)start, (void*)end);
 
-    while (current != end) {
+    while (current->s.size != 1) {
         printf("Header: %p, Size: %lu, Free: %d, Prev Free: %d, Next Block: %p\n", (void*)current, current->s.size, current->s.free, current->s.prev_free, (void*)current->s.next_block);
         current = current->s.next_block;
     }

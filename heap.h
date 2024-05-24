@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -11,10 +12,7 @@
 
 #define HEAP_SIZE 0x100000 // 1MB
 
-header_t* find_free_block(size_t size);
 void* heap_malloc(size_t size);
-void* heap_calloc(size_t num, size_t size);
-void* heap_realloc(void* block, size_t size);
 void heap_free(void* block);
 void print_heap();
 void init_heap();
