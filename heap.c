@@ -32,7 +32,7 @@ header_t* find_free_block(size_t size) {
     void* best_fit_header = NULL; // Pointer to the best fit block header
     void* best_fit_block; // Pointer to the best fit block
     // Traverse the free list until the end is reached or an exact fit is found - best fit
-    while (current != end) {
+    while (current->s.size != 1) {
         int current_size = current->s.size;
         // Check if the block is free
         if (current->s.free == 1) {
@@ -63,7 +63,7 @@ header_t* find_free_block(size_t size) {
  * Allocates a block of memory of size bytes.
  * Returns a pointer to the beginning of the block of memory that was allocated
  */
-void* heap_alloc(size_t size) {
+void* heap_malloc(size_t size) {
     if (size < 1) {
         return NULL;
     }
@@ -96,6 +96,10 @@ void* heap_alloc(size_t size) {
             new_block->s.next_block = best_fit_header->s.next_block;
             new_block->s.prev_free = 0;
             new_block->s.next_block->s.prev_free = 1; // Update the next blocks prev_free
+            header_t* footer = (void*) new_block + new_block->s.size - sizeof(header_t);
+            footer->s.size = new_block->s.size;
+
+
             best_fit_header->s.size = total_size;
             best_fit_header->s.free = 0;
             best_fit_header->s.next_block = new_block;
@@ -214,7 +218,7 @@ void heap_free(void* block) {
     // Coalesce adjacent free blocks - immediate coalescing
 
     // Check if the next block is free
-    if (current->s.next_block != end && current->s.next_block->s.free == 1) {
+    if (current->s.size != 1 && current->s.next_block->s.free == 1) {
         current->s.size += current->s.next_block->s.size;
         current->s.next_block = current->s.next_block->s.next_block;
 
@@ -230,6 +234,27 @@ void heap_free(void* block) {
 
         footer->s.size = prev_block_header->s.size;
     }
+}
+
+/*
+ * Initializes the heap, is run once at the start of the program
+ */
+void init_heap() {
+    header_t* start_header = malloc(HEAP_SIZE);
+    start_header->s.size = HEAP_SIZE;
+
+    header_t* end = start_header + HEAP_SIZE - sizeof(header_t);;
+    end->s.size = 1;
+    end->s.free = 0;
+    end->s.prev_free = 1;
+    end->s.next_block = NULL;
+
+    // Start the heap with a free block
+    start = (void*) start_header + sizeof(header_t);
+    start->s.size = start_header->s.size - sizeof(header_t) * 2;
+    start->s.free = 1;
+    start->s.prev_free = 0;
+    start->s.next_block = end;
 }
 
 /*
